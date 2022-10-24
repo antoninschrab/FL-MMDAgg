@@ -38,7 +38,7 @@ def mmdagg(
     assert n >= 2 and m >= 2
     assert X.shape[1] == Y.shape[1]
     assert 0 < alpha  and alpha < 1
-    assert kernel_type in ["gaussian", "laplace", "imq", "mattern_0.5_l1", "mattern_1.5_l1", "mattern_2.5_l1", "mattern_3.5_l1", "mattern_4.5_l1", "mattern_0.5_l2", "mattern_1.5_l2", "mattern_2.5_l2", "mattern_3.5_l2", "mattern_4.5_l2", "all_l1", "all_l2", "all"]
+    assert kernel_type in ["gaussian", "laplace", "imq", "matern_0.5_l1", "matern_1.5_l1", "matern_2.5_l1", "matern_3.5_l1", "matern_4.5_l1", "matern_0.5_l2", "matern_1.5_l2", "matern_2.5_l2", "matern_3.5_l2", "matern_4.5_l2", "all_l1", "all_l2", "all", "all_plus_g", "laplace_gaussian"]
     assert approx_type in ["wild bootstrap"] # "permutation" to be added
     assert weights_type in ["uniform", "decreasing", "increasing", "centred"]
     assert l_plus >= l_minus
@@ -62,10 +62,19 @@ def mmdagg(
     
     # create weights
     N =  len(bandwidths)
+    if kernel_type == "laplace_gaussian":
+        N = 2 * N
     if kernel_type == "all":
-        N = 10 * N
+        n_kernels = 3 * 2
+        N = n_kernels * N
+    if kernel_type == "all_plus_g":
+        n_kernels = 3 * 2
+        N_old = N
+        N = (n_kernels + 1) * N
+        N_old = n_kernels * N_old
     elif kernel_type in ["all_l1", "all_l2"]:
-        N = 5 * N
+        n_kernels = 3 
+        N = n_kernels * N
     weights = create_weights(N, weights_type)
 
     # Step 1: compute all simulated MMD estimates (efficient as in Appendix C in our paper)
@@ -79,49 +88,89 @@ def mmdagg(
         if kernel_type in ["all_l1", "all_l2"]:
             l = kernel_type[-2:]
             pairwise_matrix = compute_pairwise_matrix(X, Y, l)
-            kernels = ["mattern_" + str(j) + ".5_" + l for j in range(5)]
-            for j in range(5):
+            kernels = ["matern_" + str(j) + ".5_" + l for j in range(n_kernels)]
+            for j in range(n_kernels):
                 kernel = kernels[j]
-                for i in range(int(N / 5)):
+                for i in range(int(N / n_kernels)):
                     bandwidth = bandwidths[i]
                     # compute kernel matrix for bandwidth
                     K = kernel_matrix(pairwise_matrix, l, kernel, bandwidth)
-                    # to avoid catastrophic cancellation substract mean
-                    K = K - np.mean(K[~np.eye(K.shape[0], dtype=bool)])
                     # set diagonal elements to zero
                     mutate_K(K, approx_type)
-                    # correct for substracting the mean
-                    M[int(N / 5) * j + i] = np.sum(R * (K @ R), 0) + 2 * K.shape[0] * np.mean(K[~np.eye(K.shape[0], dtype=bool)])
+                    # compute MMD bootstrapped values
+                    M[int(N / n_kernels) * j + i] = np.sum(R * (K @ R), 0)
         elif kernel_type == "all":
             pairwise_matrix_l1 = compute_pairwise_matrix(X, Y, "l1")
             pairwise_matrix_l2 = compute_pairwise_matrix(X, Y, "l2")
-            kernels = ["mattern_" + str(j) + ".5_" + ll for j in range(5) for ll in ("l1", "l2")]
-            for j in range(10):
+            kernels = ["matern_" + str(j) + ".5_" + ll for j in range(int(n_kernels / 2)) for ll in ("l1", "l2")]
+            for j in range(n_kernels):
                 kernel = kernels[j]
                 l = kernel[-2:]
                 pairwise_matrix = pairwise_matrix_l1 if l == "l1" else pairwise_matrix_l2
-                for i in range(int(N / 10)):
+                for i in range(int(N / n_kernels)):
                     bandwidth = bandwidths[i]
                     # compute kernel matrix for bandwidth
                     K = kernel_matrix(pairwise_matrix, l, kernel, bandwidth)
-                    # to avoid catastrophic cancellation substract mean
-                    K = K - np.mean(K[~np.eye(K.shape[0], dtype=bool)])
                     # set diagonal elements to zero
                     mutate_K(K, approx_type)
-                    # correct for substracting the mean
-                    M[int(N / 10) * j + i] = np.sum(R * (K @ R), 0) + 2 * K.shape[0] * np.mean(K[~np.eye(K.shape[0], dtype=bool)])
+                    # compute MMD bootstrapped values
+                    M[int(N / n_kernels) * j + i] = np.sum(R * (K @ R), 0)
+        elif kernel_type == "all_plus_g":
+            pairwise_matrix_l1 = compute_pairwise_matrix(X, Y, "l1")
+            pairwise_matrix_l2 = compute_pairwise_matrix(X, Y, "l2")
+            kernels = ["matern_" + str(j) + ".5_" + ll for j in range(int(n_kernels / 2)) for ll in ("l1", "l2")]
+            for j in range(n_kernels):
+                kernel = kernels[j]
+                l = kernel[-2:]
+                pairwise_matrix = pairwise_matrix_l1 if l == "l1" else pairwise_matrix_l2
+                for i in range(int(N_old / n_kernels)):
+                    bandwidth = bandwidths[i]
+                    # compute kernel matrix for bandwidth
+                    K = kernel_matrix(pairwise_matrix, l, kernel, bandwidth)
+                    # set diagonal elements to zero
+                    mutate_K(K, approx_type)
+                    # compute MMD bootstrapped values
+                    M[int(N_old / n_kernels) * j + i] = np.sum(R * (K @ R), 0)
+            pairwise_matrix = pairwise_matrix_l2 
+            for i in range(int(N_old / n_kernels)):
+                bandwidth = bandwidths[i]
+                # compute kernel matrix for bandwidth
+                K = kernel_matrix(pairwise_matrix, l, "gaussian", bandwidth)
+                # set diagonal elements to zero
+                mutate_K(K, approx_type)
+                # compute MMD bootstrapped values
+                M[N_old + i] = np.sum(R * (K @ R), 0)
+        elif kernel_type == "laplace_gaussian":
+            l = "l1"
+            pairwise_matrix = compute_pairwise_matrix(X, Y, l)
+            for i in range(int(N / 2)):
+                bandwidth = bandwidths[i]
+                # compute kernel matrix for bandwidth
+                K = kernel_matrix(pairwise_matrix, l, "laplace", bandwidth)
+                # set diagonal elements to zero
+                mutate_K(K, approx_type)
+                # compute MMD bootstrapped values
+                M[i] = np.sum(R * (K @ R), 0)
+            l = "l2sq"
+            pairwise_matrix = compute_pairwise_matrix(X, Y, l)
+            for i in range(int(N / 2)):
+                bandwidth = bandwidths[i]
+                # compute kernel matrix for bandwidth
+                K = kernel_matrix(pairwise_matrix, l, "gaussian", bandwidth)
+                # set diagonal elements to zero
+                mutate_K(K, approx_type)
+                # compute MMD bootstrapped values
+                M[int(N / 2) + i] = np.sum(R * (K @ R), 0)
         else:
             pairwise_matrix = compute_pairwise_matrix(X, Y, l)
             for i in range(N):
                 bandwidth = bandwidths[i]
                 # compute kernel matrix for bandwidth
                 K = kernel_matrix(pairwise_matrix, l, kernel_type, bandwidth)
-                # to avoid catastrophic cancellation substract mean
-                K = K - np.mean(K[~np.eye(K.shape[0], dtype=bool)])
                 # set diagonal elements to zero
                 mutate_K(K, approx_type)
-                # correct for substracting the mean
-                M[i] = np.sum(R * (K @ R), 0) + 2 * K.shape[0] * np.mean(K[~np.eye(K.shape[0], dtype=bool)])
+                # compute MMD bootstrapped values
+                M[i] = np.sum(R * (K @ R), 0)
     else:
         raise ValueError(
             'The value of approx_type should be "wild bootstrap".'
@@ -153,11 +202,9 @@ def mmdagg(
         if ( MMD_original[i] 
             > M1_sorted[i, int(np.ceil((B1 + 1) * (1 - u * weights[i]))) - 1]
         ):
-            #print("Bandwidth rejecting:", l_minus+i)
             reject = True
     if reject:
         return 1
-    #print("Fail to reject")
     return 0 
 
 
@@ -189,6 +236,15 @@ def mutate_K(K, approx_type):
             K[m + i, i] = 0
 
 def compute_pairwise_matrix(X, Y, l):
+    """
+    Compute the pairwise distance matrix between all the points in X and Y,
+    in L1 norm or L2 norm or L2 norm squared.
+
+    inputs: X: (m,d) array of samples
+            Y: (m,d) array of samples
+            l: "l1" or "l2" or "l2sq"
+    output: (2m,2m) pairwise distance matrix
+    """
     Z = np.concatenate((X, Y))
     if l == "l1":
         return scipy.spatial.distance.cdist(Z, Z, 'cityblock')
@@ -200,20 +256,32 @@ def compute_pairwise_matrix(X, Y, l):
         raise ValueError("Third input should either be 'l1', 'l2' or 'l2sq'.")
 
 def kernel_matrix(pairwise_matrix, l, kernel_type, bandwidth):
+    """
+    Compute kernel matrix for a given kernel_type and bandwidth. 
+
+    inputs: pairwise_matrix: (2m,2m) matrix of pairwise distances
+            l: "l1" or "l2" or "l2sq"
+            kernel_type: string from ("gaussian", "laplace", "imq", "matern_0.5_l1", "matern_1.5_l1", "matern_2.5_l1", "matern_3.5_l1", "matern_4.5_l1", "matern_0.5_l2", "matern_1.5_l2", "matern_2.5_l2", "matern_3.5_l2", "matern_4.5_l2")
+    output: (2m,2m) pairwise distance matrix
+
+    Warning: The pair of variables l and kernel_type must be valid.
+    """
     d = pairwise_matrix / bandwidth
     if kernel_type == "gaussian" and l == "l2sq":
         return  np.exp(-d / bandwidth)
+    if kernel_type == "gaussian" and l == "l2":
+        return  np.exp(-d ** 2)
     elif kernel_type == "imq" and l == "l2sq":
         return (1 + d / bandwidth) ** (-0.5)
-    elif (kernel_type == "mattern_0.5_l1" and l == "l1") or (kernel_type == "mattern_0.5_l2" and l == "l2") or (kernel_type == "laplace" and l == "l1"):
+    elif (kernel_type == "matern_0.5_l1" and l == "l1") or (kernel_type == "matern_0.5_l2" and l == "l2") or (kernel_type == "laplace" and l == "l1"):
         return  np.exp(-d)
-    elif (kernel_type == "mattern_1.5_l1" and l == "l1") or (kernel_type == "mattern_1.5_l2" and l == "l2"):
+    elif (kernel_type == "matern_1.5_l1" and l == "l1") or (kernel_type == "matern_1.5_l2" and l == "l2"):
         return (1 + np.sqrt(3) * d) * np.exp(- np.sqrt(3) * d)
-    elif (kernel_type == "mattern_2.5_l1" and l == "l1") or (kernel_type == "mattern_2.5_l2" and l == "l2"):
+    elif (kernel_type == "matern_2.5_l1" and l == "l1") or (kernel_type == "matern_2.5_l2" and l == "l2"):
         return (1 + np.sqrt(5) * d + 5 / 3 * d ** 2) * np.exp(- np.sqrt(5) * d)
-    elif (kernel_type == "mattern_3.5_l1" and l == "l1") or (kernel_type == "mattern_3.5_l2" and l == "l2"):
+    elif (kernel_type == "matern_3.5_l1" and l == "l1") or (kernel_type == "matern_3.5_l2" and l == "l2"):
         return (1 + np.sqrt(7) * d + 2 * 7 / 5 * d ** 2 + 7 * np.sqrt(7) / 3 / 5 * d ** 3) * np.exp(- np.sqrt(7) * d)
-    elif (kernel_type == "mattern_4.5_l1" and l == "l1") or (kernel_type == "mattern_4.5_l2" and l == "l2"):
+    elif (kernel_type == "matern_4.5_l1" and l == "l1") or (kernel_type == "matern_4.5_l2" and l == "l2"):
         return (1 + 3 * d + 3 * (6 ** 2) / 28 * d ** 2 + (6 ** 3) / 84 * d ** 3 + (6 ** 4) / 1680 * d ** 4) * np.exp(- 3 * d)
     else:
         raise ValueError(
@@ -221,7 +289,6 @@ def kernel_matrix(pairwise_matrix, l, kernel_type, bandwidth):
         )
 
 def compute_median_bandwidth_subset(seed, X, Y, max_samples=500):
-    #def compute_median_bandwidth_subset_NO(seed, X, Y, max_samples=500):
     """
     Compute the median L^2-distance between all the points in X and Y using at
     most max_samples samples.

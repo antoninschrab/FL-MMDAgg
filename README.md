@@ -10,6 +10,9 @@ The code for MMDAgg in [mmdaggupdate](mmdaggupdate) has been slighly modified to
 | -- | -- | -- | -- | -- | -- | -- | -- | -- |
 | MMDAgg Gaussian | 0.17 | 0.26 | 0.34 | 0.40 | 0.41 | 0.50 | 0.61 | 0.76 |
 | MMDAgg Laplace | 0.22 | 0.27 | 0.37 | 0.44 | 0.46 | 0.55 | 0.66 | 0.80 |
+| MMDAgg Laplace & Gaussian | 0.20 | 0.27 | 0.37 | 0.43 | 0.44 | 0.54 | 0.65 | 0.81 |
+| MMDAgg L1 Matern 0.5 1.5 2.5 | 0.21 | 0.28 | 0.38 | 0.42 | 0.46 | 0.54 | 0.64 | 0.80 |
+| MMDAgg Gaussian & L1/L2 Matern 0.5 1.5 2.5 | 0.20 | 0.28 | 0.38 | 0.42 | 0.44 | 0.55 | 0.65 | 0.81 |
 
 ## Datasets
 
@@ -32,11 +35,11 @@ The results are saved in [paper_results/mmdagg_laplace](paper_results/mmdagg_lap
 The experiments consist of
 'embarrassingly parallel for loops' which can be computed efficiently using parallel computing libraries such as `joblib` or `dask`.
 
-The experiments for MMDAgg Gaussian can be run by first replacing 'laplace' by 'gaussian' on line 39 of [pipeline.py](pipeline.py) and on line 138 of [shift_tester.py](shift_tester.py), and then executing
+The experiments for other kernel choices can be run by first replacing `laplace` by either `gaussian`, `laplace_gaussian`, `all_l1` or `all_plus_g` on line 39 of [pipeline.py](pipeline.py), and by replacing `laplace` on line 138 of [shift_tester.py](shift_tester.py) by an appropriate name for the directory (for example `gaussian`, `laplace_gaussian`, `matern_l1_0.5_1.5_2.5` or `gaussian_matern_l1_l2_0.5_1.5_2.5`), and then executing
 ```
 bash script.sh
 ```
-The results are then saved in [paper_results/mmdagg_gaussian](paper_results/mmdagg_gaussian).
+The results are then saved in [paper_results/](paper_results/).
 
 ## Results (numerical)
 
