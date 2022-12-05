@@ -34,7 +34,7 @@ test_type = sys.argv[3]
 
 # Define results path and create directory.
 path = './paper_results/'
-path += test_type + '_laplace/'
+path += test_type + '_m3_10_5000_laplace/'
 path += datset + '_'
 path += sys.argv[2] + '/'
 if not os.path.exists(path):

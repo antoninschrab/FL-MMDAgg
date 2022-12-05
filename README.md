@@ -2,9 +2,27 @@
 
 We evaluate the performance our MMDAgg test ([paper](https://arxiv.org/abs/2110.15073), [code](https://github.com/antoninschrab/mmdagg-paper)) on the Failing Loudly benchmark ([paper](https://proceedings.neurips.cc/paper/2019/hash/846c260d715e5b854ffad5f70a516c88-Abstract.html), [code](https://github.com/steverab/failing-loudly/)) which has also been considered by Kübler et al. ([paper](https://arxiv.org/abs/2206.08843), [code](https://github.com/jmkuebler/autoML-TST-paper)). The code in this repository is based on the two aforementionned repositories which are both under the MIT License.
 
-The code for MMDAgg in [mmdaggupdate](mmdaggupdate) has been slighly modified to be memory-efficient.
+The code for MMDAgg in [mmdaggupdate](mmdaggupdate) has been slighly modified to be memory-efficient but the test outputs remain the same.
 
 ## Results (table)
+
+First, we report the MMDAgg results for the Gaussian and Laplace kernels with collection of bandwidths consisting of $2^\ell \lambda_{med}$ for $\ell=10,\dots,20$ where $\lambda_{med}$ is the median bandwidth. This collection of bandwidths has been considered for the MMD test splitting the data in the MNIST experiment of [MMD Aggregated Two-Sample Test](https://arxiv.org/abs/2110.15073) in Section 5.3. As in that setting, we use 1000 bootstrap samples $(B_1=B_2=500)$.
+
+| Sample size | 10 | 20 | 50 | 100 | 200 | 500 | 1000 | 10000 |
+| -- | -- | -- | -- | -- | -- | -- | -- | -- |
+| MMDAgg Laplace | 0.20 | 0.28 | 0.40 | 0.43 | 0.46 | 0.52 | 0.58 | 0.79 |
+| MMDAgg Gaussian | 0.15 | 0.23 | 0.33 | 0.35 | 0.38 | 0.44 | 0.48 | 0.69 |
+
+As observed in the MNIST experiment of [MMD Aggregated Two-Sample Test](https://arxiv.org/abs/2110.15073) in Figure 5, MMDAgg Laplace outperforms MMDAgg Gaussian.
+
+As can be seen in the next table, using 10000 bootstrap samples $(B_1=B_2=5000)$ instead of 1000 does not affect the power of MMDAgg.
+
+| Sample size | 10 | 20 | 50 | 100 | 200 | 500 | 1000 | 10000 |
+| -- | -- | -- | -- | -- | -- | -- | -- | -- |
+| MMDAgg Laplace | 0.20 | 0.28 | 0.40 | 0.43 | 0.46 | 0.53 | 0.57 | 0.78 |
+| MMDAgg Gaussian | 0.14 | 0.22 | 0.33 | 0.35 | 0.39 | 0.44 | 0.48 | 0.68 |
+
+Finally, we propose to use a different collection consisting of bandwidths $2^\ell \lambda_{med}$ for $\ell=-3,\dots,10$ where $\lambda_{med}$ is the median bandwidth, which has been designed so that $\exp(-1/\lambda)$ is between $0.0001$ and $0.999$. We use 10000 bootstrap samples $(B_1=B_2=5000)$. We also consider using collections including different types of kernels (each with bandwidths $2^\ell \lambda_{med}$ for $\ell=-3,\dots,10$). We consider combinations of the Gaussian, Laplace, and Matérn kernels with parameters $\nu=0.5, 1.5, 2.5$ using either the $L^1$ or $L^2$ distance.
 
 | Sample size | 10 | 20 | 50 | 100 | 200 | 500 | 1000 | 10000 |
 | -- | -- | -- | -- | -- | -- | -- | -- | -- |
@@ -31,24 +49,22 @@ The experiments for MMDAgg Laplace can be run using
 ```
 bash script.sh
 ```
-The results are saved in [paper_results/mmdagg_laplace](paper_results/mmdagg_laplace).
+The results are saved in [paper_results/mmdagg_laplace](paper_results/mmdagg_m3_10_5000_laplace).
 The experiments consist of
 'embarrassingly parallel for loops' which can be computed efficiently using parallel computing libraries such as `joblib` or `dask`.
 
-The experiments for other kernel choices can be run by first replacing `laplace` by either `gaussian`, `laplace_gaussian`, `all_l1` or `all_plus_g` on line 39 of [pipeline.py](pipeline.py), and by replacing `laplace` on line 138 of [shift_tester.py](shift_tester.py) by an appropriate name for the directory (for example `gaussian`, `laplace_gaussian`, `matern_l1_0.5_1.5_2.5` or `gaussian_matern_l1_l2_0.5_1.5_2.5`), and then executing
+The other experiments can be run by changing the MMDAgg parameters on lines 133--146 of [shift_tester.py](shift_tester.py), for example, the parameter `kernel_type` can be changed to `laplace`, `gaussian`, `laplace_gaussian`, `all_l1` or `all_plus_g`. The directory name on line 39 of [pipeline.py](pipeline.py) should also be changed accordingly to save the results in a new directory in [paper_results/](paper_results/). Once the parameters have been changed, running the experiments can be done by executing
 ```
 bash script.sh
 ```
-The results are then saved in [paper_results/](paper_results/).
-
-## Results (numerical)
 
 The test power for MMDAgg for those experiments can then be obtained by running
 ```
 python results.py
 ```
-The results are presented in the table above.
+The results are presented in the tables above.
 
 ## License
 
 MIT License (see [LICENSE.md](LICENSE.md))
+
