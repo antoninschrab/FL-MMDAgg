@@ -1,4 +1,19 @@
 # -------------------------------------------------
+# PARAMETERS
+# make sure those match the ones in pipeline.py
+# -------------------------------------------------
+
+# old = True
+# kernel_type = "laplace"
+# kernel_type = "gaussian"
+
+old = False
+kernel_type = "laplace"
+# kernel_type = "gaussian"
+# kernel_type = "laplace_gaussian"
+# kernel_type = "all"
+
+# -------------------------------------------------
 # IMPORTS
 # -------------------------------------------------
 
@@ -12,7 +27,8 @@ from scipy.spatial import distance
 
 from shared_utils import *
 
-from mmdaggupdate.tests import mmdagg
+from mmdagg_old import mmdagg as mmdagg_old
+from mmdagg import mmdagg
 
 # -------------------------------------------------
 # SHIFT TESTER
@@ -130,20 +146,28 @@ class ShiftTester:
             T = np.minimum(X_tr.shape[0], X_te.shape[0])
             X_tr = X_tr[:T]
             X_te = X_te[:T]
-            output = mmdagg(
-                seed=0,
-                X=X_tr,
-                Y=X_te,
-                alpha=0.05,
-                kernel_type='laplace',
-                approx_type='wild bootstrap',
-                weights_type='uniform',
-                l_minus=-3,
-                l_plus=10,
-                B1=5000,
-                B2=5000,
-                B3=100,
-            )
+            if old:
+                output = mmdagg_old(
+                    seed=0,
+                    X=X_tr,
+                    Y=X_te,
+                    alpha=0.05,
+                    kernel_type=kernel_type,
+                    approx_type='wild bootstrap',
+                    weights_type='uniform',
+                    l_minus=10,
+                    l_plus=20,
+                    B1=500,
+                    B2=500,
+                    B3=100,
+                )
+            else: 
+                output = mmdagg(
+                    X=X_tr,
+                    Y=X_te,
+                    alpha=0.05,
+                    kernel=kernel_type,
+                )
             p_val = 1 - output  # so that if p_val < 0.05 the test rejects (output = 1)
         elif self.mt == MultidimensionalTest.Energy:
             energy_test = EnergyStatistic(len(X_tr), len(X_te))

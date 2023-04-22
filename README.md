@@ -2,11 +2,13 @@
 
 We evaluate the performance our MMDAgg test ([paper](https://arxiv.org/abs/2110.15073), [code](https://github.com/antoninschrab/mmdagg-paper)) on the Failing Loudly benchmark ([paper](https://proceedings.neurips.cc/paper/2019/hash/846c260d715e5b854ffad5f70a516c88-Abstract.html), [code](https://github.com/steverab/failing-loudly/)) which has also been considered by Kübler et al. ([paper](https://arxiv.org/abs/2206.08843), [code](https://github.com/jmkuebler/autoML-TST-paper)). The code in this repository is based on the two aforementionned repositories which are both under the MIT License.
 
-The code for MMDAgg in [mmdaggupdate](mmdaggupdate) has been slighly modified to be memory-efficient but the test outputs remain the same.
+We run experiments using both the old version [mmdagg_old.py](mmdagg_old.py) and the current version [mmdagg.py](mmdagg.py) of MMDAgg. 
+
+Our MMDAgg test can be run in practice using the `mmdagg` package implemented the [mmdagg repository](https://github.com/antoninschrab/mmdagg/), which contains both a Numpy version and a Jax version.
 
 ## Results (table)
 
-First, we report the MMDAgg results for the Gaussian and Laplace kernels with collection of bandwidths consisting of $2^\ell \lambda_{med}$ for $\ell=10,\dots,20$ where $\lambda_{med}$ is the median bandwidth. This collection of bandwidths has been considered for the MMD test splitting the data in the MNIST experiment of [MMD Aggregated Two-Sample Test](https://arxiv.org/abs/2110.15073) in Section 5.3. As in that setting, we use 1000 bootstrap samples $(B_1=B_2=500)$.
+First, we report the MMDAgg results for the Laplace and Gaussian kernels using the old version of MMDAgg with a collection of bandwidths consisting of $2^\ell \lambda_{med}$ for $\ell=10,\dots,20$ where $\lambda_{med}$ is the median bandwidth. This collection of bandwidths has been considered for the MMD test splitting the data in the MNIST experiment of [MMD Aggregated Two-Sample Test](https://arxiv.org/abs/2110.15073) in Section 5.4.
 
 | Sample size | 10 | 20 | 50 | 100 | 200 | 500 | 1000 | 10000 |
 | -- | -- | -- | -- | -- | -- | -- | -- | -- |
@@ -15,22 +17,17 @@ First, we report the MMDAgg results for the Gaussian and Laplace kernels with co
 
 As observed in the MNIST experiment of [MMD Aggregated Two-Sample Test](https://arxiv.org/abs/2110.15073) in Figure 5, MMDAgg Laplace outperforms MMDAgg Gaussian.
 
-As can be seen in the next table, using 10000 bootstrap samples $(B_1=B_2=5000)$ instead of 1000 does not affect the power of MMDAgg.
+We now report results using the current version of MMDAgg, which is introduced in Section 5.2 of [MMD Aggregated Two-Sample Test](https://arxiv.org/abs/2110.15073) and referred to as $\textrm{MMDAgg}^\star$ in the paper. This test uses an adaptive parameter-free collection of bandwidths. The test MMDAgg All aggregates 12 types of kernels, each with 10 bandwidths, details are provided in Section 5.4 of [MMD Aggregated Two-Sample Test](https://arxiv.org/abs/2110.15073).
 
 | Sample size | 10 | 20 | 50 | 100 | 200 | 500 | 1000 | 10000 |
 | -- | -- | -- | -- | -- | -- | -- | -- | -- |
-| MMDAgg Laplace | 0.20 | 0.28 | 0.40 | 0.43 | 0.46 | 0.53 | 0.57 | 0.78 |
-| MMDAgg Gaussian | 0.14 | 0.22 | 0.33 | 0.35 | 0.39 | 0.44 | 0.48 | 0.68 |
+| MMDAgg Laplace | 0.21 | 0.29 | 0.40 | 0.44 | 0.47 | 0.56 | 0.67 | 0.83 |
+| MMDAgg Gaussian | 0.19 | 0.26 | 0.34 | 0.42 | 0.42 | 0.51 | 0.62 | 0.75 |
+| MMDAgg Laplace & Gaussian | 0.21 | 0.27 | 0.37 | 0.43 | 0.45 | 0.54 | 0.65 | 0.80 |
+| MMDAgg All | 0.21 | 0.27 | 0.37 | 0.43 | 0.46 | 0.55 | 0.66 | 0.80 |
 
-Finally, we propose to use a different collection consisting of bandwidths $2^\ell \lambda_{med}$ for $\ell=-3,\dots,10$ where $\lambda_{med}$ is the median bandwidth, which has been designed so that $\exp(-1/\lambda)$ is between $0.0001$ and $0.999$. We use 10000 bootstrap samples $(B_1=B_2=5000)$. We also consider using collections including different types of kernels (each with bandwidths $2^\ell \lambda_{med}$ for $\ell=-3,\dots,10$). We consider combinations of the Gaussian, Laplace, and Matérn kernels with parameters $\nu=0.5, 1.5, 2.5$ using either the $L^1$ or $L^2$ distance.
-
-| Sample size | 10 | 20 | 50 | 100 | 200 | 500 | 1000 | 10000 |
-| -- | -- | -- | -- | -- | -- | -- | -- | -- |
-| MMDAgg Gaussian | 0.17 | 0.26 | 0.34 | 0.40 | 0.41 | 0.50 | 0.61 | 0.76 |
-| MMDAgg Laplace | 0.22 | 0.27 | 0.37 | 0.44 | 0.46 | 0.55 | 0.66 | 0.80 |
-| MMDAgg Laplace & Gaussian | 0.20 | 0.27 | 0.37 | 0.43 | 0.44 | 0.54 | 0.65 | 0.81 |
-| MMDAgg L1 Matern 0.5 1.5 2.5 | 0.21 | 0.28 | 0.38 | 0.42 | 0.46 | 0.54 | 0.64 | 0.80 |
-| MMDAgg Gaussian & L1/L2 Matern 0.5 1.5 2.5 | 0.20 | 0.28 | 0.38 | 0.42 | 0.44 | 0.55 | 0.65 | 0.81 |
+We observe that this parameter-free version of MMDAgg obtains higher power than the one presented above with the collection consisting of $2^\ell \lambda_{med}$ for $\ell=10,\dots,20$ where $\lambda_{med}$ is the median bandwidth.
+The test retains high power when aggregating over many more kernels (i.e. MMDAgg All).
 
 ## Datasets
 
@@ -38,25 +35,19 @@ The adversarial datasets can either be generated by running
 ```
 python generate_adv_samples.py
 ```
-which saves them in a `datasets` directory,
+which saves them in the `datasets` directory,
 or they can be directly downloaded from the [failing-loudly](https://github.com/steverab/failing-loudly/tree/42afd118237ded54c6ebef4a3417d8c1db44f76d/datasets) repository. 
 
 ## Experiments
 
 The environment is the same as the one considered in the [autoML-TST-paper](https://github.com/jmkuebler/autoML-TST-paper) repository, it can be installed by following their instructions.
 
-The experiments for MMDAgg Laplace can be run using 
+The experiments can be run by first editing the parameters (choice of version and of kernel for MMDAgg) at the beginning of the [pipeline.py](pipeline.py) and [shift_tester.py](shift_tester.py) files, and then executing
 ```
 bash script.sh
 ```
-The results are saved in [paper_results/mmdagg_laplace](paper_results/mmdagg_m3_10_5000_laplace).
-The experiments consist of
-'embarrassingly parallel for loops' which can be computed efficiently using parallel computing libraries such as `joblib` or `dask`.
-
-The other experiments can be run by changing the MMDAgg parameters on lines 133--146 of [shift_tester.py](shift_tester.py), for example, the parameter `kernel_type` can be changed to `laplace`, `gaussian`, `laplace_gaussian`, `all_l1` or `all_plus_g`. The directory name on line 39 of [pipeline.py](pipeline.py) should also be changed accordingly to save the results in a new directory in [paper_results/](paper_results/). Once the parameters have been changed, running the experiments can be done by executing
-```
-bash script.sh
-```
+The results are saved in the [paper_results/](paper_results/) directory.
+The experiments consist of 'embarrassingly parallel for loops' which can be computed efficiently using parallel computing libraries such as `joblib` or `dask`.
 
 The test power for MMDAgg for those experiments can then be obtained by running
 ```

@@ -1,4 +1,19 @@
 # -------------------------------------------------
+# PARAMETERS
+# make sure those match the ones in shift_tester.py
+# -------------------------------------------------
+
+# old = True
+# kernel_type = "laplace"
+# kernel_type = "gaussian"
+
+old = False
+kernel_type = "laplace"
+# kernel_type = "gaussian"
+# kernel_type = "laplace_gaussian"
+# kernel_type = "all"
+
+# -------------------------------------------------
 # IMPORTS
 # -------------------------------------------------
 
@@ -33,8 +48,9 @@ datset = sys.argv[1]
 test_type = sys.argv[3] 
 
 # Define results path and create directory.
+old_str = "_old" if old else "" 
 path = './paper_results/'
-path += test_type + '_m3_10_5000_laplace/'
+path += test_type + old_str + '_' + kernel_type + '/'
 path += datset + '_'
 path += sys.argv[2] + '/'
 if not os.path.exists(path):
